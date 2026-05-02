@@ -1,0 +1,21 @@
+# Entornos virtuales
+venv/
+env/
+.venv/
+
+# Variables de entorno
+.env
+
+# Carpetas de Python
+__pycache__/
+*.pyc
+
+# Base de datos vectorial (No subir los binarios de ChromaDB)
+data/chroma/
+
+# Frontend (Node)
+frontend/node_modules/
+frontend/dist/
+
+# Archivos del sistema
+.DS_Store

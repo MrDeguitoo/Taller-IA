@@ -1,177 +1,108 @@
-# 🔧 Sistema Inteligente de Traducción de Diagnósticos Mecánicos con IA y RAG
+# 🔧 Taller IA — Diagnósticos Mecánicos con IA
 
-[![Python](https://img.shields.io/badge/Python-3.11-blue?logo=python)](https://www.python.org/)
-[![LangChain](https://img.shields.io/badge/LangChain-0.2-green?logo=chainlink)](https://python.langchain.com/)
-[![Ollama](https://img.shields.io/badge/Ollama-LLaMA_3.1_8B-orange)](https://ollama.com)
-[![ChromaDB](https://img.shields.io/badge/ChromaDB-0.5-purple)](https://www.trychroma.com)
-[![FastAPI](https://img.shields.io/badge/FastAPI-0.110-teal?logo=fastapi)](https://fastapi.tiangolo.com/)
+**IMPORTANTE, LA ESTRUCTURA DE ARCHIVOS QUEDO RARA AL USAR UNA MAC PARA HACER LA SEGUNDA PARTE, POR LO QUE TODO LO DE LA EVALUACION 2 ESTA DENTRO DE LA CARPETA TALLER-IA2**
 
-## 📋 Descripción del Proyecto
+Sistema de inteligencia artificial para talleres mecánicos en Chile. Combina dos capacidades principales: un **Traductor RAG** que convierte diagnósticos técnicos en lenguaje simple para el cliente, y un **Agente IA conversacional** con memoria de sesión que puede razonar sobre herramientas, calcular urgencia y guardar diagnósticos.
 
-Este proyecto corresponde a una solución basada en Inteligencia Artificial, modelos LLM y técnicas RAG orientada a mejorar la comunicación entre talleres mecánicos y sus clientes.
-
-El sistema permite traducir diagnósticos automotrices técnicos a un lenguaje simple y comprensible utilizando documentos reales del taller, historial de reparaciones y manuales automotrices como base de conocimiento.
-
-La solución utiliza un pipeline de Recuperación Aumentada por Generación (RAG) junto con un modelo LLM ejecutado localmente mediante Ollama.
+Todo corre **100% local** gracias a Ollama, sin necesidad de APIs externas ni costos por uso.
 
 ---
 
-# Problema que Resuelve
+## ¿Qué problema resuelve?
 
-| Problema Detectado                          | Solución Implementada                   |
-| ------------------------------------------- | --------------------------------------- |
-| Clientes no entienden diagnósticos técnicos | Traducción automática a lenguaje simple |
-| Desconfianza en reparaciones                | Explicaciones claras y entendibles      |
-| Mucho tiempo explicando fallas              | Respuestas automáticas mediante IA      |
-| Información técnica dispersa                | Centralización mediante RAG             |
-| Riesgo de respuestas incorrectas            | Uso de contexto real recuperado         |
+| Problema | Solución |
+|---|---|
+| Los clientes no entienden los diagnósticos técnicos | Traducción automática a lenguaje simple usando RAG |
+| Desconfianza en las reparaciones | Explicaciones claras basadas en documentación real |
+| Mucho tiempo explicando las mismas fallas | Agente conversacional con memoria por sesión |
+| Información técnica dispersa | Base vectorial ChromaDB con documentos del taller |
 
 ---
 
-# Arquitectura del Sistema
+## Arquitectura general
 
-```text
-┌──────────────────────────────┐
-│       Cliente / Mecánico     │
-└──────────────┬───────────────┘
-               │
-               ▼
-┌──────────────────────────────┐
-│      Frontend Web            │
-│    React + Tailwind          │
-└──────────────┬───────────────┘
-               │
-               ▼
-┌──────────────────────────────┐
-│         Backend API          │
-│          FastAPI             │
-└──────────────┬───────────────┘
-               │
-       ┌───────┴────────┐
-       ▼                ▼
-┌──────────────┐   ┌────────────────┐
-│   Motor RAG  │   │ Base de Datos  │
-│  LangChain   │   │    SQLite      │
-└──────┬───────┘   └────────────────┘
-       │
-       ▼
-┌──────────────────────────────┐
-│        ChromaDB              │
-│      Base Vectorial          │
-└──────────────┬───────────────┘
-               │
-               ▼
-┌──────────────────────────────┐
-│  Documentos del Taller       │
-│ - Informes técnicos          │
-│ - Manuales PDF               │
-│ - Historial de fallas        │
-└──────────────┬───────────────┘
-               │
-               ▼
-┌──────────────────────────────┐
-│      LLM Local               │
-│   LLaMA 3.1 + Ollama         │
-└──────────────┬───────────────┘
-               │
-               ▼
-┌──────────────────────────────┐
-│ Respuesta Simplificada       │
-│ para el Cliente              │
-└──────────────────────────────┘
+```mermaid
+flowchart TD
+    subgraph Frontend["🖥️ Frontend — React 18 + Vite"]
+        UI1["Pestaña 1\nTraductor RAG"]
+        UI2["Pestaña 2\nAgente IA"]
+    end
+
+    subgraph Backend["⚙️ Backend — FastAPI + Python 3.11"]
+        R1["POST /api/v1/traducir"]
+        R2["POST /api/v1/agente/stream\n(SSE)"]
+
+        subgraph RAG["Pipeline RAG"]
+            R1 --> EMB["Embeddings\nnomic-embed-text"]
+            EMB --> VDB["ChromaDB\n(búsqueda semántica)"]
+            VDB --> LLMR["LLM — LLaMA 3.1 8B\n(genera explicación simple)"]
+        end
+
+        subgraph Agent["Agente ReAct — LangChain 0.2"]
+            R2 --> MEM["ConversationBufferMemory\n(memoria por sesión)"]
+            MEM --> REACT["AgentExecutor\nReAct loop"]
+            REACT --> T1["🔧 ConsultarBaseConocimiento\n(ChromaDB)"]
+            REACT --> T2["⚠️ CalcularUrgencia\n(ALTA / MEDIA / BAJA)"]
+            REACT --> T3["💾 GuardarDiagnostico\n(SQLite)"]
+            REACT --> LLMA["LLM — LLaMA 3.1 8B\n(razonamiento)"]
+        end
+    end
+
+    subgraph Ollama["🦙 Ollama — Local"]
+        LLMR
+        LLMA
+    end
+
+    UI1 -->|"HTTP POST"| R1
+    UI2 -->|"HTTP POST + SSE"| R2
+    LLMR --> UI1
+    LLMA -->|"eventos SSE\n(tool_start / tool_end / finish)"| UI2
 ```
 
----
-
-# Flujo General del Pipeline RAG
-
-1. El usuario ingresa una consulta o diagnóstico técnico.
-2. La consulta es convertida en embeddings.
-3. ChromaDB busca los fragmentos más relevantes.
-4. El contexto recuperado se inserta en el prompt.
-5. LLaMA 3.1 genera una respuesta simplificada.
-6. El cliente recibe una explicación clara y comprensible.
+> El proxy de Vite redirige `/api/*` → `localhost:8000`, por lo que no hay problemas de CORS en desarrollo. Todo el procesamiento ocurre localmente, sin llamadas a APIs externas.
 
 ---
 
-# Tecnologías Utilizadas
+## Stack tecnológico
 
-| Tecnología       | Función                    |
-| ---------------- | -------------------------- |
-| Python 3.11      | Backend principal          |
-| FastAPI          | API REST                   |
-| React            | Frontend                   |
-| LangChain        | Orquestación RAG           |
-| ChromaDB         | Base vectorial             |
-| Ollama           | Ejecución local de modelos |
-| LLaMA 3.1        | Modelo LLM                 |
-| nomic-embed-text | Embeddings                 |
-| SQLite           | Base de datos              |
-| Docker           | Contenedores               |
+| Capa | Tecnología | Para qué se usa |
+|---|---|---|
+| LLM local | Ollama + LLaMA 3.1 8B | Generación de texto, razonamiento del agente |
+| Embeddings | nomic-embed-text | Vectorización de documentos para RAG |
+| Backend | FastAPI 0.110 + Python 3.11 | API REST y streaming SSE |
+| Agente | LangChain 0.2 (ReAct) | Razonamiento paso a paso con herramientas |
+| Base vectorial | ChromaDB | Búsqueda semántica de documentos |
+| Persistencia | SQLite | Historial de diagnósticos guardados |
+| Frontend | React 18 + Vite 5 + Tailwind CSS | Interfaz web con dos pestañas |
 
 ---
 
-# Ejecución del Proyecto
+## Inicio rápido
 
-## 1. Clonar repositorio
+### Requisitos previos
+- Python 3.11+
+- Node.js 18+
+- [Ollama](https://ollama.com) instalado y corriendo
 
-```bash
-git clone https://github.com/usuario/proyecto-taller-ia.git
-cd proyecto-taller-ia
-```
-
----
-
-## 2. Crear entorno virtual
+### 1. Entorno Python
 
 ```bash
 python -m venv venv
-```
-
-### Activar entorno
-
-Linux/macOS:
-
-```bash
-source venv/bin/activate
-```
-
-Windows:
-
-```bash
-venv\\Scripts\\activate
-```
-
----
-
-## 3. Instalar dependencias
-
-```bash
+source venv/bin/activate          # macOS/Linux
+# venv\Scripts\activate           # Windows
 pip install -r requirements.txt
 ```
 
----
-
-## 4. Instalar Ollama
-
-Descargar desde:
-
-https://ollama.com
-
----
-
-## 5. Descargar modelos
+### 2. Modelos Ollama
 
 ```bash
 ollama pull llama3.1:8b
 ollama pull nomic-embed-text
 ```
 
----
+### 3. Variables de entorno
 
-## 6. Configurar variables de entorno
-
-Crear archivo `.env`
+Crea un archivo `.env` en la raíz del proyecto:
 
 ```env
 OLLAMA_MODEL=llama3.1:8b
@@ -180,106 +111,121 @@ CHROMA_DB=./data/chroma
 SQLITE_DB=./data/database.db
 ```
 
----
+### 4. Indexar documentos
 
-## 7. Ejecutar indexación de documentos
+Coloca los PDFs o archivos de texto del taller en `data/documentos/` y ejecuta:
 
 ```bash
 python scripts/index_documents.py
 ```
 
----
+Esto genera la base vectorial en `data/chroma/`.
 
-## 8. Iniciar Backend
+### 5. Levantar el backend
+
+Desde la raíz del proyecto, con el entorno virtual activo:
 
 ```bash
 uvicorn app.main:app --reload
 ```
 
-API disponible en:
+Verificar que esté corriendo:
 
 ```text
-http://localhost:8000
+INFO:     Uvicorn running on [http://127.0.0.1:8000](http://127.0.0.1:8000) (Press CTRL+C to quit)
+INFO:     Started reloader process
+INFO:     Application startup complete.
 ```
 
----
+- API REST: `http://localhost:8000`
+- Documentación Swagger: `http://localhost:8000/docs`
 
-## 9. Iniciar Frontend
+### 6. Levantar el frontend
+
+En otra terminal, desde la carpeta `frontend/`:
 
 ```bash
 cd frontend
-npm install
+npm install       # solo la primera vez
 npm run dev
 ```
 
-Frontend disponible en:
+- Aplicación web: `http://localhost:5173`
+- El proxy Vite redirige automáticamente `/api/*` → `http://localhost:8000`
+
+> **Orden de inicio recomendado**: primero Ollama, luego el backend, luego el frontend.
+
+---
+
+## Funcionalidades
+
+### Pestaña 1 — Traductor RAG
+1. El mecánico ingresa un diagnóstico técnico.
+2. El sistema busca contexto relevante en ChromaDB.
+3. El LLM genera una explicación simple para el cliente, sin jerga técnica.
+
+### Pestaña 2 — Agente IA con Streaming
+Chat conversacional en tiempo real. El agente usa el patrón **ReAct** y muestra cada paso:
+- **Pensamiento**: el agente decide qué herramienta usar.
+- **🔧 Herramienta en ejecución**: nombre y parámetros.
+- **✅ Resultado**: lo que devolvió la herramienta.
+- **Respuesta final**: explicación para el cliente en lenguaje chileno.
+
+---
+
+## Herramientas del Agente
+
+| Herramienta | Qué hace |
+|---|---|
+| `ConsultarBaseConocimiento` | Busca en ChromaDB documentación técnica relevante |
+| `CalcularUrgencia` | Evalúa si la falla es urgencia ALTA, MEDIA o BAJA |
+| `GuardarDiagnostico` | Persiste el diagnóstico en SQLite con fecha y sesión |
+
+---
+
+## Endpoints de la API
+
+La documentación interactiva (Swagger) está disponible en `http://localhost:8000/docs`.
+
+* `POST /api/v1/traducir`: Traduce un diagnóstico técnico a lenguaje simple usando RAG.
+* `POST /api/v1/agente`: Envía un mensaje al agente y espera la respuesta completa.
+* `POST /api/v1/agente/stream`: Devuelve la respuesta como **Server-Sent Events (SSE)**.
+* `DELETE /api/v1/agente/{session_id}`: Elimina el historial de conversación de una sesión.
+
+---
+
+## Estructura del proyecto
 
 ```text
-http://localhost:3000
+app/
+  main.py
+  routers/
+  services/
+  prompts/
+  models/
+frontend/
+  src/
+  vite.config.js
+data/
+  documentos/
+  chroma/
+  database.db
+scripts/
+  index_documents.py
+  test_rag.py
 ```
 
 ---
 
-# Estructura del Proyecto
+## 🔍 Evidencia y Validación del Sistema
 
-```text
-proyecto-taller-ia/
-│
-├── app/
-│   ├── main.py
-│   ├── routers/
-│   ├── services/
-│   ├── prompts/
-│   └── models/
-│
-├── frontend/
-│
-├── data/
-│   ├── documentos/
-│   └── chroma/
-│
-├── scripts/
-│   ├── index_documents.py
-│   └── test_rag.py
-│
-├── tests/
-│
-├── requirements.txt
-├── docker-compose.yml
-└── README.md
-```
+Para cumplir con los criterios de evaluación de la asignatura, este repositorio incluye material complementario que permite comprender y validar el funcionamiento de la solución y del Agente ReAct:
 
----
+* **Bocetos de Diseño:** En la carpeta `docs/` se encuentran los bocetos iniciales de la interfaz de usuario (UI) y el diagrama de arquitectura.
+* **Evidencia de Pruebas:** En la carpeta `assets/` se adjuntan capturas de pantalla que demuestran:
+  1. La indexación exitosa de documentos en ChromaDB.
+  2. La ejecución del flujo de Streaming (SSE) mostrando los pasos de razonamiento del Agente y el uso de las herramientas.
+  3. El funcionamiento de las pestañas en el Frontend con React.
 
-# Ejemplos de Uso
-
-```text
-Usuario:
-Explícame qué significa falla en el sistema de inyección.
-
-Respuesta:
-El vehículo presenta un problema en el sistema que envía combustible al motor.
-Esto puede provocar pérdida de potencia, consumo excesivo de combustible o dificultad para encender el automóvil.
-Se recomienda revisar la bomba de combustible y los inyectores para evitar daños mayores.
-```
-
----
-
-# Beneficios Esperados
-
-* Mejor comprensión por parte de los clientes.
-* Mayor confianza en el taller.
-* Reducción de tiempo explicando diagnósticos.
-* Respuestas más rápidas y precisas.
-* Uso de información real mediante RAG.
-* Modernización de procesos del taller.
-
----
-
-# Referencias Técnicas
-
-* LangChain Documentation
-* Ollama Documentation
-* ChromaDB Documentation
-* FastAPI Documentation
-* Lewis et al. (2020). Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks.
+### Instrucciones para el Evaluador
+Para validar las herramientas, la memoria del Agente y la lógica de negocio de manera rápida, puede utilizar la documentación interactiva generada por FastAPI ingresando a `http://localhost:8000/docs`. Desde allí podrá probar los endpoints de traducción, creación de agentes y borrado de memoria directamente desde su navegador.

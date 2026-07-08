@@ -63,8 +63,6 @@ Taller-IA/
 └── instalar.bat                # Atajo de instalación en Windows
 ```
 
-> **Nota:** No subas archivos de sistema operativo (`__MACOSX/`, `._*`, `.DS_Store`). Ya están en `.gitignore`.
-
 ---
 
 ## Configuración inicial (solo la primera vez)

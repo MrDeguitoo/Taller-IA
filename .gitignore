@@ -6,16 +6,28 @@ env/
 # Variables de entorno
 .env
 
-# Carpetas de Python
+# Python
 __pycache__/
 *.pyc
+*.pyo
 
-# Base de datos vectorial (No subir los binarios de ChromaDB)
+# Base de datos vectorial generada localmente
 data/chroma/
 
-# Frontend (Node)
+# Frontend
 frontend/node_modules/
 frontend/dist/
 
-# Archivos del sistema
+# IDEs
+.idea/
+.vscode/
+*.iml
+
+# macOS / Windows (basura de sistema operativo)
 .DS_Store
+._*
+__MACOSX/
+.AppleDouble
+.LSOverride
+Thumbs.db
+desktop.ini

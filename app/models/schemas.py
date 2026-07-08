@@ -1,10 +1,18 @@
 from pydantic import BaseModel
 
-# Lo que el cliente envía a la API
+
 class QueryRequest(BaseModel):
     diagnostico: str
 
-# Lo que la API le responde al cliente
+
 class QueryResponse(BaseModel):
     diagnostico_original: str
     explicacion: str
+
+
+class MetricsResponse(BaseModel):
+    requests_total: int
+    requests_success: int
+    requests_failed: int
+    avg_latency_ms: float
+    last_latency_ms: float | None

@@ -3,7 +3,10 @@ uvicorn==0.27.1
 langchain==0.2.0
 langchain-community==0.2.0
 langchain-chroma
+langchain-text-splitters
 chromadb==0.5.0
 python-dotenv
 pypdf
 pydantic
+streamlit==1.39.0
+requests==2.32.3

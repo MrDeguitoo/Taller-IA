@@ -55,7 +55,7 @@ Taller-IA/
 │   ├── test_rag.py             # Prueba búsqueda vectorial
 │   └── dashboard.py            # Dashboard Streamlit (Eval 3 — IE5)
 ├── data/
-│   └── documentos/             # Coloca aquí los PDFs del taller
+│   └── documentos/            
 ├── requirements.txt
 ├── Dockerfile                  # Backend (Docker)
 ├── docker-compose.yaml
